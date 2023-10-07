@@ -11,11 +11,13 @@ import (
 var (
 	dryRun          bool
 	retentionPeriod int
+	familyPrefix    string
 )
 
 func init() {
 	flag.BoolVar(&dryRun, "dry-run", false, "Turn on dry-run.")
 	flag.IntVar(&retentionPeriod, "retention-period", 0, "Retention period for task definitions.")
+	flag.StringVar(&familyPrefix, "family-prefix", "", "Family name of task definitions.")
 	flag.Parse()
 }
 
@@ -26,5 +28,5 @@ func main() {
 		log.Fatal(err)
 	}
 
-	app.Run(ctx, dryRun, retentionPeriod)
+	app.Run(ctx, dryRun, retentionPeriod, familyPrefix)
 }

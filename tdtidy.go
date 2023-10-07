@@ -12,8 +12,9 @@ import (
 )
 
 type options struct {
-	dryRun    bool
-	threshold time.Time
+	dryRun       bool
+	threshold    time.Time
+	familyPrefix *string
 }
 
 type families map[string][]string
@@ -44,12 +45,18 @@ func New(ctx context.Context) (*App, error) {
 	}, nil
 }
 
-func (app *App) Run(ctx context.Context, dryRun bool, retentionPeriod int) {
+func (app *App) Run(ctx context.Context, dryRun bool, retentionPeriod int, familyPrefix string) {
 	opts := options{
 		dryRun:    dryRun,
 		threshold: time.Now().AddDate(0, 0, -retentionPeriod).UTC(),
 	}
 	log.Printf("[info] threshold datetime: %s", opts.threshold.Format(time.RFC3339))
+
+	if familyPrefix == "" {
+		opts.familyPrefix = nil
+	} else {
+		opts.familyPrefix = &familyPrefix
+	}
 
 	if _, err := app.deregister(ctx, opts); err != nil {
 		log.Fatal(err)
@@ -61,7 +68,7 @@ func (app *App) Run(ctx context.Context, dryRun bool, retentionPeriod int) {
 }
 
 func (app *App) deregister(ctx context.Context, opts options) (bool, error) {
-	tdArns, err := app.getTaskDefinitionArns(ctx, types.TaskDefinitionStatusActive)
+	tdArns, err := app.getTaskDefinitionArns(ctx, types.TaskDefinitionStatusActive, opts.familyPrefix)
 	if err != nil {
 		return false, err
 	}
@@ -101,7 +108,7 @@ func (app *App) deregister(ctx context.Context, opts options) (bool, error) {
 }
 
 func (app *App) delete(ctx context.Context, opts options) (bool, error) {
-	tdArns, err := app.getTaskDefinitionArns(ctx, types.TaskDefinitionStatusInactive)
+	tdArns, err := app.getTaskDefinitionArns(ctx, types.TaskDefinitionStatusInactive, opts.familyPrefix)
 	if err != nil {
 		return false, err
 	}
@@ -138,9 +145,10 @@ func (app *App) delete(ctx context.Context, opts options) (bool, error) {
 	return true, nil
 }
 
-func (app *App) getTaskDefinitionArns(ctx context.Context, status types.TaskDefinitionStatus) ([]string, error) {
+func (app *App) getTaskDefinitionArns(ctx context.Context, status types.TaskDefinitionStatus, familyPrefix *string) ([]string, error) {
 	p := ecs.NewListTaskDefinitionsPaginator(app.ecs, &ecs.ListTaskDefinitionsInput{
-		Status: status,
+		FamilyPrefix: familyPrefix,
+		Status:       status,
 	})
 
 	tdArns := make([]string, 0)
