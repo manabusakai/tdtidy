@@ -15,9 +15,9 @@ var (
 )
 
 func init() {
-	flag.BoolVar(&dryRun, "dry-run", false, "Turn on dry-run.")
-	flag.IntVar(&retentionPeriod, "retention-period", 0, "Retention period for task definitions.")
-	flag.StringVar(&familyPrefix, "family-prefix", "", "Family name of task definitions.")
+	flag.BoolVar(&dryRun, "dry-run", false, "Turn on dry-run. List the target task definitions.")
+	flag.IntVar(&retentionPeriod, "retention-period", 0, "Retention period for task definitions. Unit is number of days. The default value is zero.")
+	flag.StringVar(&familyPrefix, "family-prefix", "", "Family name of task definitions. If specified, filter by family name.")
 	flag.Parse()
 }
 
