@@ -11,6 +11,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 )
 
+// Refill rate of API actions per second.
+// https://docs.aws.amazon.com/AmazonECS/latest/APIReference/request-throttling.html
+const refillRate = 1
+
 type options struct {
 	dryRun       bool
 	threshold    time.Time
@@ -102,6 +106,9 @@ func (app *App) deregister(ctx context.Context, opts options) (bool, error) {
 			return false, err
 		}
 		log.Printf("[notice] deregister task definition: %s", td)
+
+		// Avoid request throttling.
+		time.Sleep(refillRate * time.Second)
 	}
 
 	return true, nil
@@ -140,6 +147,9 @@ func (app *App) delete(ctx context.Context, opts options) (bool, error) {
 			return false, err
 		}
 		log.Printf("[notice] delete task definitions: %v", chunk)
+
+		// Avoid request throttling.
+		time.Sleep(refillRate * time.Second)
 	}
 
 	return true, nil
@@ -180,7 +190,7 @@ func (app *App) selectTaskDefinitions(ctx context.Context, threshold time.Time, 
 			deregisteredAt: res.TaskDefinition.DeregisteredAt,
 		}
 
-		// Exclude task definitions by registeredAt or deregisteredAt
+		// Exclude task definitions by registeredAt or deregisteredAt.
 		if td.deregisteredAt == nil && td.registeredAt.After(threshold) {
 			continue
 		}
