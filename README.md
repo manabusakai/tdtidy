@@ -13,6 +13,20 @@ The following AWS IAM permissions are required.
 - [ecs:DescribeTaskDefinition](https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_DescribeTaskDefinition.html)
 - [ecs:ListTaskDefinitions](https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_ListTaskDefinitions.html)
 
+## Installation
+
+### Homebrew
+
+```
+$ brew install manabusakai/tap/tdtidy
+```
+
+### go install
+
+```
+$ go install github.com/manabusakai/tdtidy/cmd/tdtidy@latest
+```
+
 ## Usage
 
 ```
