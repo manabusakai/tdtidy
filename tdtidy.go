@@ -190,6 +190,11 @@ func (app *App) selectTaskDefinitions(ctx context.Context, threshold time.Time, 
 			deregisteredAt: res.TaskDefinition.DeregisteredAt,
 		}
 
+		// Old task definitions do not have RegisteredAt.
+		if td.registeredAt == nil {
+			continue
+		}
+
 		// Exclude task definitions by registeredAt or deregisteredAt.
 		if td.deregisteredAt == nil && td.registeredAt.After(threshold) {
 			continue
