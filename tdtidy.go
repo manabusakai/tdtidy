@@ -82,30 +82,30 @@ func (app *App) deregister(ctx context.Context, opts options) (bool, error) {
 		return false, err
 	}
 
-	tds := make([]string, 0)
+	tdNames := make([]string, 0)
 	for _, family := range families {
 		// Keep the latest revision.
 		family = family[:len(family)-1]
 
-		tds = append(tds, family...)
+		tdNames = append(tdNames, family...)
 	}
 
-	if len(tds) == 0 {
+	if len(tdNames) == 0 {
 		return true, nil
 	}
 
-	for _, td := range tds {
+	for _, tdName := range tdNames {
 		if opts.dryRun {
-			log.Printf("[dry-run] deregister task definition: %s", td)
+			log.Printf("[dry-run] deregister task definition: %s", tdName)
 			continue
 		}
 
 		if _, err := app.ecs.DeregisterTaskDefinition(ctx, &ecs.DeregisterTaskDefinitionInput{
-			TaskDefinition: &td,
+			TaskDefinition: &tdName,
 		}); err != nil {
 			return false, err
 		}
-		log.Printf("[notice] deregister task definition: %s", td)
+		log.Printf("[notice] deregister task definition: %s", tdName)
 
 		// Avoid request throttling.
 		time.Sleep(refillRate * time.Second)
@@ -125,28 +125,28 @@ func (app *App) delete(ctx context.Context, opts options) (bool, error) {
 		return false, err
 	}
 
-	tds := make([]string, 0)
+	tdNames := make([]string, 0)
 	for _, family := range families {
-		tds = append(tds, family...)
+		tdNames = append(tdNames, family...)
 	}
 
-	if len(tds) == 0 {
+	if len(tdNames) == 0 {
 		return true, nil
 	}
 
 	chunkSize := 10
-	for _, chunk := range chunk(tds, chunkSize) {
+	for _, tdNames := range chunk(tdNames, chunkSize) {
 		if opts.dryRun {
-			log.Printf("[dry-run] delete task definitions: %v", chunk)
+			log.Printf("[dry-run] delete task definitions: %v", tdNames)
 			continue
 		}
 
 		if _, err := app.ecs.DeleteTaskDefinitions(ctx, &ecs.DeleteTaskDefinitionsInput{
-			TaskDefinitions: chunk,
+			TaskDefinitions: tdNames,
 		}); err != nil {
 			return false, err
 		}
-		log.Printf("[notice] delete task definitions: %v", chunk)
+		log.Printf("[notice] delete task definitions: %v", tdNames)
 
 		// Avoid request throttling.
 		time.Sleep(refillRate * time.Second)
