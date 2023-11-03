@@ -72,12 +72,12 @@ func (app *App) Run(ctx context.Context, dryRun bool, retentionPeriod int, famil
 }
 
 func (app *App) deregister(ctx context.Context, opts options) (bool, error) {
-	tdArns, err := app.getTaskDefinitionArns(ctx, types.TaskDefinitionStatusActive, opts.familyPrefix)
+	tds, err := app.getTaskDefinitions(ctx, types.TaskDefinitionStatusActive, opts.familyPrefix)
 	if err != nil {
 		return false, err
 	}
 
-	families, err := app.selectTaskDefinitions(ctx, opts.threshold, tdArns)
+	families, err := app.selectTaskDefinitions(opts.threshold, tds)
 	if err != nil {
 		return false, err
 	}
@@ -115,12 +115,12 @@ func (app *App) deregister(ctx context.Context, opts options) (bool, error) {
 }
 
 func (app *App) delete(ctx context.Context, opts options) (bool, error) {
-	tdArns, err := app.getTaskDefinitionArns(ctx, types.TaskDefinitionStatusInactive, opts.familyPrefix)
+	tds, err := app.getTaskDefinitions(ctx, types.TaskDefinitionStatusInactive, opts.familyPrefix)
 	if err != nil {
 		return false, err
 	}
 
-	families, err := app.selectTaskDefinitions(ctx, opts.threshold, tdArns)
+	families, err := app.selectTaskDefinitions(opts.threshold, tds)
 	if err != nil {
 		return false, err
 	}
@@ -155,41 +155,42 @@ func (app *App) delete(ctx context.Context, opts options) (bool, error) {
 	return true, nil
 }
 
-func (app *App) getTaskDefinitionArns(ctx context.Context, status types.TaskDefinitionStatus, familyPrefix *string) ([]string, error) {
+func (app *App) getTaskDefinitions(ctx context.Context, status types.TaskDefinitionStatus, familyPrefix *string) ([]taskdef, error) {
 	p := ecs.NewListTaskDefinitionsPaginator(app.ecs, &ecs.ListTaskDefinitionsInput{
 		FamilyPrefix: familyPrefix,
 		Status:       status,
 	})
 
-	tdArns := make([]string, 0)
+	tds := make([]taskdef, 0)
 	for p.HasMorePages() {
 		res, err := p.NextPage(ctx)
 		if err != nil {
 			return nil, err
 		}
-		tdArns = append(tdArns, res.TaskDefinitionArns...)
+
+		for _, tdArn := range res.TaskDefinitionArns {
+			res, err := app.ecs.DescribeTaskDefinition(ctx, &ecs.DescribeTaskDefinitionInput{
+				TaskDefinition: &tdArn,
+			})
+			if err != nil {
+				return nil, err
+			}
+
+			tds = append(tds, taskdef{
+				family:         *res.TaskDefinition.Family,
+				revision:       res.TaskDefinition.Revision,
+				registeredAt:   res.TaskDefinition.RegisteredAt,
+				deregisteredAt: res.TaskDefinition.DeregisteredAt,
+			})
+		}
 	}
 
-	return tdArns, nil
+	return tds, nil
 }
 
-func (app *App) selectTaskDefinitions(ctx context.Context, threshold time.Time, tdArns []string) (families, error) {
+func (app *App) selectTaskDefinitions(threshold time.Time, tds []taskdef) (families, error) {
 	families := make(families)
-	for _, tdArn := range tdArns {
-		res, err := app.ecs.DescribeTaskDefinition(ctx, &ecs.DescribeTaskDefinitionInput{
-			TaskDefinition: &tdArn,
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		td := taskdef{
-			family:         *res.TaskDefinition.Family,
-			revision:       res.TaskDefinition.Revision,
-			registeredAt:   res.TaskDefinition.RegisteredAt,
-			deregisteredAt: res.TaskDefinition.DeregisteredAt,
-		}
-
+	for _, td := range tds {
 		// Old task definitions do not have RegisteredAt.
 		if td.registeredAt == nil {
 			continue
