@@ -1,6 +1,6 @@
 module github.com/manabusakai/tdtidy
 
-go 1.21.3
+go 1.22.1
 
 require (
 	github.com/aws/aws-sdk-go-v2/config v1.18.39
