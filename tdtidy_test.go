@@ -4,15 +4,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/stretchr/testify/assert"
 )
 
 func Test_selectTaskDefinitions(t *testing.T) {
 	now := time.Now()
-	app := &App{
-		ecs: &ecs.Client{},
-	}
+	app := &App{}
 
 	type args struct {
 		threshold time.Time

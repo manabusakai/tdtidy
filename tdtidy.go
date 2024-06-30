@@ -11,6 +11,21 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 )
 
+var (
+	ecsClient *ecs.Client
+)
+
+type App struct{}
+
+func New(ctx context.Context) (*App, error) {
+	cfg, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		return nil, err
+	}
+	ecsClient = ecs.NewFromConfig(cfg)
+	return &App{}, nil
+}
+
 // Refill rate of API actions per second.
 // https://docs.aws.amazon.com/AmazonECS/latest/APIReference/request-throttling.html
 const refillRate = 1
@@ -32,21 +47,6 @@ type taskdef struct {
 
 func (td taskdef) name() string {
 	return fmt.Sprintf("%s:%d", td.family, td.revision)
-}
-
-type App struct {
-	ecs *ecs.Client
-}
-
-func New(ctx context.Context) (*App, error) {
-	cfg, err := config.LoadDefaultConfig(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	return &App{
-		ecs: ecs.NewFromConfig(cfg),
-	}, nil
 }
 
 func (app *App) Run(ctx context.Context, dryRun bool, retentionPeriod int, familyPrefix string) {
@@ -100,7 +100,7 @@ func (app *App) deregister(ctx context.Context, opts options) (bool, error) {
 			continue
 		}
 
-		if _, err := app.ecs.DeregisterTaskDefinition(ctx, &ecs.DeregisterTaskDefinitionInput{
+		if _, err := ecsClient.DeregisterTaskDefinition(ctx, &ecs.DeregisterTaskDefinitionInput{
 			TaskDefinition: &tdName,
 		}); err != nil {
 			return false, err
@@ -141,7 +141,7 @@ func (app *App) delete(ctx context.Context, opts options) (bool, error) {
 			continue
 		}
 
-		if _, err := app.ecs.DeleteTaskDefinitions(ctx, &ecs.DeleteTaskDefinitionsInput{
+		if _, err := ecsClient.DeleteTaskDefinitions(ctx, &ecs.DeleteTaskDefinitionsInput{
 			TaskDefinitions: tdNames,
 		}); err != nil {
 			return false, err
@@ -156,7 +156,7 @@ func (app *App) delete(ctx context.Context, opts options) (bool, error) {
 }
 
 func (app *App) getTaskDefinitions(ctx context.Context, status types.TaskDefinitionStatus, familyPrefix *string) ([]taskdef, error) {
-	p := ecs.NewListTaskDefinitionsPaginator(app.ecs, &ecs.ListTaskDefinitionsInput{
+	p := ecs.NewListTaskDefinitionsPaginator(ecsClient, &ecs.ListTaskDefinitionsInput{
 		FamilyPrefix: familyPrefix,
 		Status:       status,
 	})
@@ -169,7 +169,7 @@ func (app *App) getTaskDefinitions(ctx context.Context, status types.TaskDefinit
 		}
 
 		for _, tdArn := range res.TaskDefinitionArns {
-			res, err := app.ecs.DescribeTaskDefinition(ctx, &ecs.DescribeTaskDefinitionInput{
+			res, err := ecsClient.DescribeTaskDefinition(ctx, &ecs.DescribeTaskDefinitionInput{
 				TaskDefinition: &tdArn,
 			})
 			if err != nil {
