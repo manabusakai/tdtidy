@@ -2,7 +2,6 @@ package tdtidy
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"time"
 
@@ -29,25 +28,6 @@ func New(ctx context.Context) (*App, error) {
 // Refill rate of API actions per second.
 // https://docs.aws.amazon.com/AmazonECS/latest/APIReference/request-throttling.html
 const refillRate = 1
-
-type options struct {
-	dryRun       bool
-	threshold    time.Time
-	familyPrefix *string
-}
-
-type families map[string][]string
-
-type taskdef struct {
-	family         string
-	revision       int32
-	registeredAt   *time.Time
-	deregisteredAt *time.Time
-}
-
-func (td taskdef) name() string {
-	return fmt.Sprintf("%s:%d", td.family, td.revision)
-}
 
 func (app *App) Run(ctx context.Context, dryRun bool, retentionPeriod int, familyPrefix string) {
 	opts := options{
