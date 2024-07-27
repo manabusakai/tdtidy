@@ -1,6 +1,7 @@
 package tdtidy
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -9,7 +10,9 @@ import (
 
 func Test_selectTaskDefinitions(t *testing.T) {
 	now := time.Now()
-	app := &App{}
+	app := &App{
+		ctx: context.TODO(),
+	}
 
 	type args struct {
 		threshold time.Time

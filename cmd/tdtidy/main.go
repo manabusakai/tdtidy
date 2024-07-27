@@ -22,11 +22,10 @@ func init() {
 }
 
 func main() {
-	ctx := context.TODO()
-	app, err := tdtidy.New(ctx)
+	app, err := tdtidy.New(context.TODO())
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	app.Run(ctx, dryRun, retentionPeriod, familyPrefix)
+	app.Run(dryRun, retentionPeriod, familyPrefix)
 }

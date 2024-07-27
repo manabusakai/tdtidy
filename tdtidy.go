@@ -14,7 +14,9 @@ var (
 	ecsClient *ecs.Client
 )
 
-type App struct{}
+type App struct {
+	ctx context.Context
+}
 
 func New(ctx context.Context) (*App, error) {
 	cfg, err := config.LoadDefaultConfig(ctx)
@@ -22,10 +24,12 @@ func New(ctx context.Context) (*App, error) {
 		return nil, err
 	}
 	ecsClient = ecs.NewFromConfig(cfg)
-	return &App{}, nil
+	return &App{
+		ctx: ctx,
+	}, nil
 }
 
-func (app *App) Run(ctx context.Context, dryRun bool, retentionPeriod int, familyPrefix string) {
+func (app *App) Run(dryRun bool, retentionPeriod int, familyPrefix string) {
 	opts := options{
 		dryRun:    dryRun,
 		threshold: time.Now().AddDate(0, 0, -retentionPeriod).UTC(),
@@ -38,17 +42,17 @@ func (app *App) Run(ctx context.Context, dryRun bool, retentionPeriod int, famil
 		opts.familyPrefix = &familyPrefix
 	}
 
-	if _, err := app.deregister(ctx, opts); err != nil {
+	if _, err := app.deregister(opts); err != nil {
 		log.Fatal(err)
 	}
 
-	if _, err := app.delete(ctx, opts); err != nil {
+	if _, err := app.delete(opts); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func (app *App) deregister(ctx context.Context, opts options) (bool, error) {
-	tds, err := app.getTaskDefinitions(ctx, types.TaskDefinitionStatusActive, opts.familyPrefix)
+func (app *App) deregister(opts options) (bool, error) {
+	tds, err := app.getTaskDefinitions(types.TaskDefinitionStatusActive, opts.familyPrefix)
 	if err != nil {
 		return false, err
 	}
@@ -76,7 +80,7 @@ func (app *App) deregister(ctx context.Context, opts options) (bool, error) {
 			continue
 		}
 
-		if _, err := ecsClient.DeregisterTaskDefinition(ctx, &ecs.DeregisterTaskDefinitionInput{
+		if _, err := ecsClient.DeregisterTaskDefinition(app.ctx, &ecs.DeregisterTaskDefinitionInput{
 			TaskDefinition: &tdName,
 		}); err != nil {
 			return false, err
@@ -90,8 +94,8 @@ func (app *App) deregister(ctx context.Context, opts options) (bool, error) {
 	return true, nil
 }
 
-func (app *App) delete(ctx context.Context, opts options) (bool, error) {
-	tds, err := app.getTaskDefinitions(ctx, types.TaskDefinitionStatusInactive, opts.familyPrefix)
+func (app *App) delete(opts options) (bool, error) {
+	tds, err := app.getTaskDefinitions(types.TaskDefinitionStatusInactive, opts.familyPrefix)
 	if err != nil {
 		return false, err
 	}
@@ -117,7 +121,7 @@ func (app *App) delete(ctx context.Context, opts options) (bool, error) {
 			continue
 		}
 
-		if _, err := ecsClient.DeleteTaskDefinitions(ctx, &ecs.DeleteTaskDefinitionsInput{
+		if _, err := ecsClient.DeleteTaskDefinitions(app.ctx, &ecs.DeleteTaskDefinitionsInput{
 			TaskDefinitions: tdNames,
 		}); err != nil {
 			return false, err
@@ -131,7 +135,7 @@ func (app *App) delete(ctx context.Context, opts options) (bool, error) {
 	return true, nil
 }
 
-func (app *App) getTaskDefinitions(ctx context.Context, status types.TaskDefinitionStatus, familyPrefix *string) ([]taskdef, error) {
+func (app *App) getTaskDefinitions(status types.TaskDefinitionStatus, familyPrefix *string) ([]taskdef, error) {
 	p := ecs.NewListTaskDefinitionsPaginator(ecsClient, &ecs.ListTaskDefinitionsInput{
 		FamilyPrefix: familyPrefix,
 		Status:       status,
@@ -139,13 +143,13 @@ func (app *App) getTaskDefinitions(ctx context.Context, status types.TaskDefinit
 
 	tds := make([]taskdef, 0)
 	for p.HasMorePages() {
-		res, err := p.NextPage(ctx)
+		res, err := p.NextPage(app.ctx)
 		if err != nil {
 			return nil, err
 		}
 
 		for _, tdArn := range res.TaskDefinitionArns {
-			res, err := ecsClient.DescribeTaskDefinition(ctx, &ecs.DescribeTaskDefinitionInput{
+			res, err := ecsClient.DescribeTaskDefinition(app.ctx, &ecs.DescribeTaskDefinitionInput{
 				TaskDefinition: &tdArn,
 			})
 			if err != nil {
