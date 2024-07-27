@@ -25,10 +25,6 @@ func New(ctx context.Context) (*App, error) {
 	return &App{}, nil
 }
 
-// Refill rate of API actions per second.
-// https://docs.aws.amazon.com/AmazonECS/latest/APIReference/request-throttling.html
-const refillRate = 1
-
 func (app *App) Run(ctx context.Context, dryRun bool, retentionPeriod int, familyPrefix string) {
 	opts := options{
 		dryRun:    dryRun,
@@ -88,7 +84,7 @@ func (app *App) deregister(ctx context.Context, opts options) (bool, error) {
 		log.Printf("[notice] deregister task definition: %s", tdName)
 
 		// Avoid request throttling.
-		time.Sleep(refillRate * time.Second)
+		sleep()
 	}
 
 	return true, nil
@@ -129,7 +125,7 @@ func (app *App) delete(ctx context.Context, opts options) (bool, error) {
 		log.Printf("[notice] delete task definitions: %v", tdNames)
 
 		// Avoid request throttling.
-		time.Sleep(refillRate * time.Second)
+		sleep()
 	}
 
 	return true, nil
