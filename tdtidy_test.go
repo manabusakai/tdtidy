@@ -12,6 +12,7 @@ func Test_selectTaskDefinitions(t *testing.T) {
 	now := time.Now()
 	app := &App{
 		ctx: context.TODO(),
+		opt: &option{},
 	}
 
 	type args struct {

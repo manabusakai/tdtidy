@@ -5,59 +5,32 @@ import (
 	"log"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 )
 
-var (
-	ecsClient *ecs.Client
-)
-
 type App struct {
 	ctx context.Context
+	opt *option
 }
 
-func New(ctx context.Context) (*App, error) {
-	cfg, err := config.LoadDefaultConfig(ctx)
-	if err != nil {
-		return nil, err
-	}
-	ecsClient = ecs.NewFromConfig(cfg)
-	return &App{
-		ctx: ctx,
-	}, nil
-}
-
-func (app *App) Run(dryRun bool, retentionPeriod int, familyPrefix string) {
-	opts := options{
-		dryRun:    dryRun,
-		threshold: time.Now().AddDate(0, 0, -retentionPeriod).UTC(),
-	}
-	log.Printf("[info] threshold datetime: %s", opts.threshold.Format(time.RFC3339))
-
-	if familyPrefix == "" {
-		opts.familyPrefix = nil
-	} else {
-		opts.familyPrefix = &familyPrefix
-	}
-
-	if _, err := app.deregister(opts); err != nil {
+func (app *App) Run() {
+	if _, err := app.deregister(); err != nil {
 		log.Fatal(err)
 	}
 
-	if _, err := app.delete(opts); err != nil {
+	if _, err := app.delete(); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func (app *App) deregister(opts options) (bool, error) {
-	tds, err := app.getTaskDefinitions(types.TaskDefinitionStatusActive, opts.familyPrefix)
+func (app *App) deregister() (bool, error) {
+	tds, err := app.getTaskDefinitions(types.TaskDefinitionStatusActive, app.opt.familyPrefix)
 	if err != nil {
 		return false, err
 	}
 
-	families, err := app.selectTaskDefinitions(opts.threshold, tds)
+	families, err := app.selectTaskDefinitions(app.opt.threshold(), tds)
 	if err != nil {
 		return false, err
 	}
@@ -75,7 +48,7 @@ func (app *App) deregister(opts options) (bool, error) {
 	}
 
 	for _, tdName := range tdNames {
-		if opts.dryRun {
+		if *app.opt.dryRun {
 			log.Printf("[dry-run] deregister task definition: %s", tdName)
 			continue
 		}
@@ -94,13 +67,13 @@ func (app *App) deregister(opts options) (bool, error) {
 	return true, nil
 }
 
-func (app *App) delete(opts options) (bool, error) {
-	tds, err := app.getTaskDefinitions(types.TaskDefinitionStatusInactive, opts.familyPrefix)
+func (app *App) delete() (bool, error) {
+	tds, err := app.getTaskDefinitions(types.TaskDefinitionStatusInactive, app.opt.familyPrefix)
 	if err != nil {
 		return false, err
 	}
 
-	families, err := app.selectTaskDefinitions(opts.threshold, tds)
+	families, err := app.selectTaskDefinitions(app.opt.threshold(), tds)
 	if err != nil {
 		return false, err
 	}
@@ -116,7 +89,7 @@ func (app *App) delete(opts options) (bool, error) {
 
 	chunkSize := 10
 	for _, tdNames := range chunk(tdNames, chunkSize) {
-		if opts.dryRun {
+		if *app.opt.dryRun {
 			log.Printf("[dry-run] delete task definitions: %v", tdNames)
 			continue
 		}

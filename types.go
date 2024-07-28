@@ -5,12 +5,6 @@ import (
 	"time"
 )
 
-type options struct {
-	dryRun       bool
-	threshold    time.Time
-	familyPrefix *string
-}
-
 type families map[string][]string
 
 type taskdef struct {
