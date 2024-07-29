@@ -1,8 +1,20 @@
 package tdtidy
 
 import (
+	"fmt"
+	"os"
 	"time"
 )
+
+var debug = debugger((os.Getenv("DEBUG") == "true"))
+
+type debugger bool
+
+func (d debugger) Printf(format string, args ...interface{}) {
+	if d {
+		fmt.Printf("[debug] %s\n", fmt.Sprintf(format, args...))
+	}
+}
 
 func chunk(items []string, chunkSize int) (chunks [][]string) {
 	if len(items) == 0 {

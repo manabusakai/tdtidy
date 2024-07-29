@@ -142,6 +142,8 @@ func (app *App) getTaskDefinitions(status types.TaskDefinitionStatus, familyPref
 }
 
 func (app *App) selectTaskDefinitions(threshold time.Time, tds []taskdef) (families, error) {
+	debug.Printf("threshold: %s", threshold.Format(time.DateTime))
+
 	families := make(families)
 	for _, td := range tds {
 		// Old task definitions do not have RegisteredAt.

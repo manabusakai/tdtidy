@@ -49,6 +49,8 @@ func initOption() (*option, error) {
 	)
 	flag.Parse()
 
+	debug.Printf("dryRun: %t, retentionPeriod: %d, familyPrefix: %q", *dryRun, *retentionPeriod, *familyPrefix)
+
 	if *familyPrefix == "" {
 		familyPrefix = nil
 	}
