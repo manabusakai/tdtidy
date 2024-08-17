@@ -5,6 +5,19 @@ import (
 	"time"
 )
 
+type command string
+
+type option struct {
+	subcommand      command
+	dryRun          *bool
+	retentionPeriod *int
+	familyPrefix    *string
+}
+
+func (opt *option) threshold() time.Time {
+	return time.Now().AddDate(0, 0, -(*opt.retentionPeriod)).UTC()
+}
+
 type families map[string][]string
 
 type taskdef struct {
