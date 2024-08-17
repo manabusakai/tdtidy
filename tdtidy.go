@@ -2,6 +2,7 @@ package tdtidy
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -15,11 +16,16 @@ type App struct {
 }
 
 func (app *App) Run() {
-	if _, err := app.deregister(); err != nil {
-		log.Fatal(err)
+	var err error
+	switch app.opt.subcommand {
+	case Deregister:
+		_, err = app.deregister()
+	case Delete:
+		_, err = app.delete()
+	default:
+		err = fmt.Errorf("unknown subcommand %q", app.opt.subcommand)
 	}
-
-	if _, err := app.delete(); err != nil {
+	if err != nil {
 		log.Fatal(err)
 	}
 }

@@ -30,14 +30,20 @@ $ go install github.com/manabusakai/tdtidy/cmd/tdtidy@latest
 ## Usage
 
 ```
-$ tdtidy -help
-Usage of tdtidy:
+USAGE:
+  tdtidy subcommand [options]
+
+SUBCOMMANDS:
+  deregister  Deregisters one or more task definitions.
+  delete      Deletes one or more task definitions. You must deregister a task definition before you delete it.
+
+OPTIONS:
   -dry-run
-        Turn on dry-run. List the target task definitions.
+        Turn on dry-run. Output the target task definitions.
   -family-prefix string
-        Family name of task definitions. If specified, filter by family name.
+        Specify the family name of the task definitions. If specified, filter by family name.
   -retention-period int
-        Retention period for task definitions. Unit is number of days. The default value is zero.
+        The retention period for task definitions is specified in days. The unit is the number of days, and the default value is zero.
 ```
 
 ## License
