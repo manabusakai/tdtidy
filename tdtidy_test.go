@@ -22,7 +22,7 @@ func Test_selectTaskDefinitions(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    families
+		want    []taskdef
 		wantErr bool
 	}{
 		{
@@ -31,12 +31,14 @@ func Test_selectTaskDefinitions(t *testing.T) {
 				threshold: now,
 				tds: []taskdef{
 					{
+						arn:            "arn:aws:ecs:ap-northeast-1:123456789012:task-definition/tdtidy:2",
 						family:         "tdtidy",
 						revision:       2,
 						registeredAt:   getPastDate(now, 5),
 						deregisteredAt: nil,
 					},
 					{
+						arn:            "arn:aws:ecs:ap-northeast-1:123456789012:task-definition/tdtidy:1",
 						family:         "tdtidy",
 						revision:       1,
 						registeredAt:   getPastDate(now, 10),
@@ -44,10 +46,20 @@ func Test_selectTaskDefinitions(t *testing.T) {
 					},
 				},
 			},
-			want: families{
-				"tdtidy": {
-					"tdtidy:2",
-					"tdtidy:1",
+			want: []taskdef{
+				{
+					arn:            "arn:aws:ecs:ap-northeast-1:123456789012:task-definition/tdtidy:2",
+					family:         "tdtidy",
+					revision:       2,
+					registeredAt:   getPastDate(now, 5),
+					deregisteredAt: nil,
+				},
+				{
+					arn:            "arn:aws:ecs:ap-northeast-1:123456789012:task-definition/tdtidy:1",
+					family:         "tdtidy",
+					revision:       1,
+					registeredAt:   getPastDate(now, 10),
+					deregisteredAt: nil,
 				},
 			},
 			wantErr: false,
@@ -58,12 +70,14 @@ func Test_selectTaskDefinitions(t *testing.T) {
 				threshold: now.AddDate(0, 0, -7).UTC(),
 				tds: []taskdef{
 					{
+						arn:            "arn:aws:ecs:ap-northeast-1:123456789012:task-definition/tdtidy:2",
 						family:         "tdtidy",
 						revision:       2,
 						registeredAt:   getPastDate(now, 5),
 						deregisteredAt: nil,
 					},
 					{
+						arn:            "arn:aws:ecs:ap-northeast-1:123456789012:task-definition/tdtidy:1",
 						family:         "tdtidy",
 						revision:       1,
 						registeredAt:   getPastDate(now, 10),
@@ -71,9 +85,13 @@ func Test_selectTaskDefinitions(t *testing.T) {
 					},
 				},
 			},
-			want: families{
-				"tdtidy": {
-					"tdtidy:1",
+			want: []taskdef{
+				{
+					arn:            "arn:aws:ecs:ap-northeast-1:123456789012:task-definition/tdtidy:1",
+					family:         "tdtidy",
+					revision:       1,
+					registeredAt:   getPastDate(now, 10),
+					deregisteredAt: nil,
 				},
 			},
 			wantErr: false,

@@ -18,9 +18,8 @@ func (opt *option) threshold() time.Time {
 	return time.Now().AddDate(0, 0, -(*opt.retentionPeriod)).UTC()
 }
 
-type families map[string][]string
-
 type taskdef struct {
+	arn            string
 	family         string
 	revision       int32
 	registeredAt   *time.Time

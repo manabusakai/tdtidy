@@ -36,35 +36,28 @@ func (app *App) deregister() (bool, error) {
 		return false, err
 	}
 
-	families, err := app.selectTaskDefinitions(app.opt.threshold(), tds)
+	tds, err = app.selectTaskDefinitions(app.opt.threshold(), tds)
 	if err != nil {
 		return false, err
 	}
 
-	tdNames := make([]string, 0)
-	for _, family := range families {
-		// Keep the latest revision.
-		family = family[:len(family)-1]
-
-		tdNames = append(tdNames, family...)
-	}
-
-	if len(tdNames) == 0 {
+	if len(tds) == 0 {
 		return true, nil
 	}
 
-	for _, tdName := range tdNames {
+	for _, td := range tds {
 		if *app.opt.dryRun {
-			log.Printf("[dry-run] deregister task definition: %s", tdName)
+			log.Printf("[dry-run] deregister task definition: %s", td.name())
 			continue
 		}
 
-		if _, err := ecsClient.DeregisterTaskDefinition(app.ctx, &ecs.DeregisterTaskDefinitionInput{
-			TaskDefinition: &tdName,
-		}); err != nil {
+		_, err := ecsClient.DeregisterTaskDefinition(app.ctx, &ecs.DeregisterTaskDefinitionInput{
+			TaskDefinition: &td.arn,
+		})
+		if err != nil {
 			return false, err
 		}
-		log.Printf("[notice] deregister task definition: %s", tdName)
+		log.Printf("[notice] deregister task definition: %s", td.name())
 
 		// Avoid request throttling.
 		sleep()
@@ -79,33 +72,28 @@ func (app *App) delete() (bool, error) {
 		return false, err
 	}
 
-	families, err := app.selectTaskDefinitions(app.opt.threshold(), tds)
+	tds, err = app.selectTaskDefinitions(app.opt.threshold(), tds)
 	if err != nil {
 		return false, err
 	}
 
-	tdNames := make([]string, 0)
-	for _, family := range families {
-		tdNames = append(tdNames, family...)
-	}
-
-	if len(tdNames) == 0 {
+	if len(tds) == 0 {
 		return true, nil
 	}
 
-	chunkSize := 10
-	for _, tdNames := range chunk(tdNames, chunkSize) {
+	for _, td := range tds {
 		if *app.opt.dryRun {
-			log.Printf("[dry-run] delete task definitions: %v", tdNames)
+			log.Printf("[dry-run] delete task definitions: %v", td.name())
 			continue
 		}
 
-		if _, err := ecsClient.DeleteTaskDefinitions(app.ctx, &ecs.DeleteTaskDefinitionsInput{
-			TaskDefinitions: tdNames,
-		}); err != nil {
+		_, err := ecsClient.DeleteTaskDefinitions(app.ctx, &ecs.DeleteTaskDefinitionsInput{
+			TaskDefinitions: []string{td.arn},
+		})
+		if err != nil {
 			return false, err
 		}
-		log.Printf("[notice] delete task definitions: %v", tdNames)
+		log.Printf("[notice] delete task definitions: %v", td.name())
 
 		// Avoid request throttling.
 		sleep()
@@ -121,6 +109,7 @@ func (app *App) getTaskDefinitions(status types.TaskDefinitionStatus, familyPref
 	})
 
 	tds := make([]taskdef, 0)
+
 	for p.HasMorePages() {
 		res, err := p.NextPage(app.ctx)
 		if err != nil {
@@ -136,6 +125,7 @@ func (app *App) getTaskDefinitions(status types.TaskDefinitionStatus, familyPref
 			}
 
 			tds = append(tds, taskdef{
+				arn:            *res.TaskDefinition.TaskDefinitionArn,
 				family:         *res.TaskDefinition.Family,
 				revision:       res.TaskDefinition.Revision,
 				registeredAt:   res.TaskDefinition.RegisteredAt,
@@ -147,10 +137,11 @@ func (app *App) getTaskDefinitions(status types.TaskDefinitionStatus, familyPref
 	return tds, nil
 }
 
-func (app *App) selectTaskDefinitions(threshold time.Time, tds []taskdef) (families, error) {
+func (app *App) selectTaskDefinitions(threshold time.Time, tds []taskdef) ([]taskdef, error) {
 	debug.Printf("threshold: %s", threshold.Format(time.DateTime))
 
-	families := make(families)
+	selectedTds := make([]taskdef, 0)
+
 	for _, td := range tds {
 		// Old task definitions do not have RegisteredAt.
 		if td.registeredAt == nil {
@@ -165,8 +156,8 @@ func (app *App) selectTaskDefinitions(threshold time.Time, tds []taskdef) (famil
 			continue
 		}
 
-		families[td.family] = append(families[td.family], td.name())
+		selectedTds = append(selectedTds, td)
 	}
 
-	return families, nil
+	return selectedTds, nil
 }
