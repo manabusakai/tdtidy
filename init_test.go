@@ -4,6 +4,8 @@ import (
 	"flag"
 	"os"
 	"testing"
+
+	. "github.com/samber/lo"
 )
 
 func Test_initOption(t *testing.T) {
@@ -21,8 +23,8 @@ func Test_initOption(t *testing.T) {
 			name: "default option",
 			args: []arg{},
 			want: &option{
-				dryRun:          toPtr(false),
-				retentionPeriod: toPtr(0),
+				dryRun:          ToPtr(false),
+				retentionPeriod: ToPtr(0),
 				familyPrefix:    nil,
 			},
 		},
@@ -44,9 +46,9 @@ func Test_initOption(t *testing.T) {
 				},
 			},
 			want: &option{
-				dryRun:          toPtr(true),
-				retentionPeriod: toPtr(7),
-				familyPrefix:    toPtr("dummy"),
+				dryRun:          ToPtr(true),
+				retentionPeriod: ToPtr(7),
+				familyPrefix:    ToPtr("dummy"),
 			},
 		},
 		{
@@ -59,8 +61,8 @@ func Test_initOption(t *testing.T) {
 				},
 			},
 			want: &option{
-				dryRun:          toPtr(true),
-				retentionPeriod: toPtr(0),
+				dryRun:          ToPtr(true),
+				retentionPeriod: ToPtr(0),
 				familyPrefix:    nil,
 			},
 		},
@@ -74,8 +76,8 @@ func Test_initOption(t *testing.T) {
 				},
 			},
 			want: &option{
-				dryRun:          toPtr(false),
-				retentionPeriod: toPtr(7),
+				dryRun:          ToPtr(false),
+				retentionPeriod: ToPtr(7),
 				familyPrefix:    nil,
 			},
 		},
@@ -89,9 +91,9 @@ func Test_initOption(t *testing.T) {
 				},
 			},
 			want: &option{
-				dryRun:          toPtr(false),
-				retentionPeriod: toPtr(0),
-				familyPrefix:    toPtr("dummy"),
+				dryRun:          ToPtr(false),
+				retentionPeriod: ToPtr(0),
+				familyPrefix:    ToPtr("dummy"),
 			},
 		},
 	}
@@ -134,8 +136,4 @@ func Test_initOption(t *testing.T) {
 			}
 		})
 	}
-}
-
-func toPtr[T any](v T) *T {
-	return &v
 }
