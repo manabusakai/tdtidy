@@ -4,13 +4,9 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"time"
 
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/ecs"
-)
-
-var (
-	ecsClient *ecs.Client
+	"github.com/manabusakai/tdtidy/internal/ecs"
 )
 
 var (
@@ -19,23 +15,11 @@ var (
 	familyPrefix    = flag.String("family-prefix", "", "Specify the family name of the task definitions. If specified, filter by family name.")
 )
 
-const (
-	Deregister command = "deregister"
-	Delete     command = "delete"
-)
-
 func New(ctx context.Context) (*App, error) {
-	cfg, err := config.LoadDefaultConfig(ctx)
-	if err != nil {
-		return nil, err
-	}
-	ecsClient = ecs.NewFromConfig(cfg)
-
 	opt, err := initOption()
 	if err != nil {
 		return nil, err
 	}
-
 	return &App{
 		ctx: ctx,
 		opt: opt,
@@ -52,9 +36,6 @@ func initOption() (*option, error) {
 	cmd, args := args[0], args[1:]
 	flag.CommandLine.Parse(args)
 
-	debug.Printf("subcommand: %s", cmd)
-	debug.Printf("dryRun: %t, retentionPeriod: %d, familyPrefix: %q", *dryRun, *retentionPeriod, *familyPrefix)
-
 	if *familyPrefix == "" {
 		familyPrefix = nil
 	}
@@ -65,4 +46,41 @@ func initOption() (*option, error) {
 		retentionPeriod: retentionPeriod,
 		familyPrefix:    familyPrefix,
 	}, nil
+}
+
+type command string
+
+const (
+	Deregister command = "deregister"
+	Delete     command = "delete"
+)
+
+type option struct {
+	subcommand      command
+	dryRun          *bool
+	retentionPeriod *int
+	familyPrefix    *string
+}
+
+func (opt *option) threshold() time.Time {
+	return time.Now().AddDate(0, 0, -(*opt.retentionPeriod)).UTC()
+}
+
+type App struct {
+	ctx context.Context
+	opt *option
+}
+
+func (app *App) Run() {
+	debug.Printf("options: {subcommand: %s, dryRun: %t, retentionPeriod: %d, familyPrefix: %q}",
+		app.opt.subcommand,
+		*app.opt.dryRun,
+		*app.opt.retentionPeriod,
+		*app.opt.familyPrefix,
+	)
+	debug.Printf("threshold: %s", app.opt.threshold().Format(time.DateTime))
+
+	client := ecs.NewClient(app.ctx)
+	processor := NewProcessor(client, app.opt)
+	processor.Process()
 }
