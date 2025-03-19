@@ -17,3 +17,10 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+    groups:
+      goreleaser-action:
+        applies-to: "version-updates"
+        patterns:
+          - "goreleaser/goreleaser-action"
+        update-types:
+          - "minor"
