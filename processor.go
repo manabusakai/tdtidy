@@ -86,12 +86,37 @@ func (p *Processor) executeSubcommand(tds map[ecs.TaskDefinitionStatus][]ecs.Tas
 		return nil
 	}
 
+	fmt.Printf("Processing %d task definitions ", len(targetTds))
+	done := make(chan bool, 1)
+	go p.showSpinner(done)
+
 	res, err := action(targetTds)
+
+	done <- true
+
 	if err != nil {
+		fmt.Printf("\rProcessing %d task definitions... Failed\n", len(targetTds))
 		return err
 	}
+
+	fmt.Printf("\rProcessing %d task definitions... Done\n", len(targetTds))
 	p.printSummary(res)
 	return nil
+}
+
+func (p *Processor) showSpinner(done chan bool) {
+	spinner := []string{"|", "/", "-", "\\"}
+	i := 0
+	for {
+		select {
+		case <-done:
+			return
+		default:
+			fmt.Printf("%s\b", spinner[i%len(spinner)])
+			i++
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
 }
 
 func (p *Processor) printSummary(tds []ecs.TaskDefinition) {
